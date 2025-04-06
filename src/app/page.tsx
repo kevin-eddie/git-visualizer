@@ -2,20 +2,20 @@ import Image from "next/image";
 import { Octokit } from "@octokit/rest";
 
 interface Commit {
-  timestamp: Date,
-  author: string,
-  commitMessage: string,
-  diff: string
+  timestamp: Date;
+  author: string;
+  commitMessage: string;
+  diff: string;
 }
 
 export default async function Home() {
   /**
-     * Fetches the commit history for a GitHub repository
-     * @param owner The repository owner (username or organization)
-     * @param repo The repository name
-     * @param token GitHub personal access token (optional but recommended)
-     * @returns Promise containing an array of Commit objects
-     */
+   * Fetches the commit history for a GitHub repository
+   * @param owner The repository owner (username or organization)
+   * @param repo The repository name
+   * @param token GitHub personal access token (optional but recommended)
+   * @returns Promise containing an array of Commit objects
+   */
   async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
     try {
       const octokit = new Octokit({
@@ -53,7 +53,7 @@ export default async function Home() {
               timestamp: date,
               author: authorName,
               commitMessage: message,
-              diff // TODO The basic listCommits endpoint doesn't include diffs, would need separate API call
+              diff
             });
           }
 
@@ -118,17 +118,87 @@ export default async function Home() {
     return diffOutput;
   }
   
+  // Fetch commits - server-side data fetching
+  const commits: Commit[] = await getRepoCommits("xkjjx", "csce315-personal-portfolio", process.env.GITHUB_TOKEN);
 
-  let commits: Commit[] = await getRepoCommits("xkjjx", "csce315-personal-portfolio", process.env.GITHUB_TOKEN);
-
-  for (const commit of commits) {
-    console.log(commit.author)
-    console.log(commit.timestamp)
-    console.log(commit.diff)
+  // Function to format date in a readable way
+  function formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
-  return (<div>
-    Hello world!
-  </div>
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-gray-900">Repository Commit History</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Viewing commits for <span className="font-medium">xkjjx/csce315-personal-portfolio</span>
+          </p>
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          {commits.length > 0 ? (
+            <div className="space-y-6">
+              {commits.map((commit, index) => (
+                <div key={index} className="bg-white shadow overflow-hidden sm:rounded-lg">
+                  <div className="px-4 py-5 sm:px-6 flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                        {commit.commitMessage.split('\n')[0]}
+                      </h3>
+                      <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                        Committed by <span className="font-medium">{commit.author}</span> on {formatDate(commit.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {commit.commitMessage.split('\n').length > 1 && (
+                    <div className="border-t border-gray-200 px-4 py-3 sm:px-6 bg-gray-50">
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {commit.commitMessage.split('\n').slice(1).join('\n')}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="border-t border-gray-200">
+                    <details className="group">
+                      <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-800 focus:outline-none">
+                        <div className="flex items-center">
+                          <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          View diff
+                        </div>
+                      </summary>
+                      <div className="px-4 py-3 bg-gray-50 text-xs overflow-x-auto">
+                        <pre className="whitespace-pre font-mono text-gray-800">{commit.diff}</pre>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6 text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m0 16v1m-8-8h1m15 0h1m-9-9l1 1m-1 13l1-1m-13-5l1 1m16-1l-1 1m-9-9l1 1m-1 13l1-1m-13-5l1 1m16-1l-1 1" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No commits found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                There are no commits in this repository or an error occurred while fetching them.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
