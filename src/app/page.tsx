@@ -5,7 +5,7 @@ interface Commit {
   timestamp: Date,
   author: string,
   commitMessage: string,
-  diff: ""
+  diff: string
 }
 
 export default async function Home() {
@@ -45,11 +45,15 @@ export default async function Home() {
             const date = new Date(commit.commit.author?.date || '');
             const message = commit.commit.message;
 
+            const diff = await getCommitDiff(octokit, owner, repo, commit.sha).catch((e) => {
+              return "";
+            })
+
             commits.push({
               timestamp: date,
               author: authorName,
               commitMessage: message,
-              diff: "" // TODO The basic listCommits endpoint doesn't include diffs, would need separate API call
+              diff // TODO The basic listCommits endpoint doesn't include diffs, would need separate API call
             });
           }
 
@@ -74,11 +78,53 @@ export default async function Home() {
     }
   }
 
+  async function getCommitDiff(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    commitSha: string
+  ): Promise<string> {
+    // Get commit to find parent SHA
+    const { data: commit } = await octokit.repos.getCommit({
+      owner,
+      repo,
+      ref: commitSha,
+    });
+  
+    if (!commit.parents || commit.parents.length === 0) {
+      throw new Error("This appears to be the first commit in the repository with no parent commits.");
+    }
+  
+    const baseSha = commit.parents[0].sha;
+  
+    // Use SDK to compare commits (structured response)
+    const { data: comparison } = await octokit.repos.compareCommitsWithBasehead({
+      owner,
+      repo,
+      basehead: `${baseSha}...${commitSha}`,
+    });
+  
+    // Build a simple unified diff-like output
+    let diffOutput = `Comparing ${baseSha}...${commitSha}\n\n`;
+  
+    for (const file of comparison.files ?? []) {
+      diffOutput += `diff --git a/${file.filename} b/${file.filename}\n`;
+      diffOutput += `--- a/${file.filename}\n`;
+      diffOutput += `+++ b/${file.filename}\n`;
+      diffOutput += file.patch ?? "(no patch available)\n";
+      diffOutput += `\n`;
+    }
+  
+    return diffOutput;
+  }
+  
+
   let commits: Commit[] = await getRepoCommits("xkjjx", "csce315-personal-portfolio", process.env.GITHUB_TOKEN);
 
   for (const commit of commits) {
     console.log(commit.author)
     console.log(commit.timestamp)
+    console.log(commit.diff)
   }
 
   return (<div>
