@@ -1,8 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";  // Updated import path
 import { PromptTemplate } from "@langchain/core/prompts";
-import { Commit } from "../types/commit";
+import Commit from "../types/commit";
 import { ChatOllama } from "@langchain/ollama";  // Updated import
-
+import { RepoAnalysis, ComplexityMetrics } from "../types/RepoAnalysis";
 
 /*
 Notes:
@@ -11,15 +11,6 @@ Generating output tokens are three times more expensive than inserting input tok
 GPT-3.5 Turbo: $0.0005/1K input tokens, $0.0015/1K output tokens
 
 */
-
-interface ComplexityMetrics {
-  totalCommits: number;
-  uniqueContributors: Set<string>;
-  filesModified: Set<string>;
-  languagesUsed: Set<string>;
-  maxDirectoryDepth: number;
-  hasTests: boolean;
-}
 
 function calculateComplexity(commits: Commit[]): ComplexityMetrics & { score: number } {
   const metrics: ComplexityMetrics = {
@@ -66,7 +57,7 @@ function calculateComplexity(commits: Commit[]): ComplexityMetrics & { score: nu
   return { ...metrics, score };
 }
 
-export async function analyzeRepoData(commits: Commit[]) {
+export async function analyzeRepoData(commits: Commit[]): Promise<RepoAnalysis> {
   const complexity = calculateComplexity(commits);
   
   // const model = new ChatOpenAI({
@@ -120,7 +111,7 @@ export async function analyzeRepoData(commits: Commit[]) {
 
   const response = await model.invoke(formattedPrompt);
   return {
-    content: response.content,
+    content: response.content.toString(),
     complexity: complexity.score,
     metrics: complexity
   };

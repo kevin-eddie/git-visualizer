@@ -1,17 +1,14 @@
-import Image from "next/image";
+"use client";
 import { analyzeRepoData } from "../lib/analyzeRepoData";
 import { Octokit } from "@octokit/rest";
-import { Commit } from "../types/commit";
-import CommitCard from "../components/CommitCard"
-
-export default async function Home() {
-  /**
-   * Fetches the commit history for a GitHub repository
-   * @param owner The repository owner (username or organization)
-   * @param repo The repository name
-   * @param token GitHub personal access token (optional but recommended)
-   * @returns Promise containing an array of Commit objects
-   */
+import Commit from "../types/commit";
+import CommitCards from "../components/CommitCards"
+import GitHubSignIn from "@/components/GitHubSignIn";
+import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { RepoAnalysis } from "../types/RepoAnalysis";
+import RepoAnalysisComponent from "@/components/RepoAnalysisComponent";
+export default function Home() {
   async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
     try {
       const octokit = new Octokit({
@@ -114,14 +111,17 @@ export default async function Home() {
     return diffOutput;
   }
   
-  // Fetch commits - server-side data fetching
-  const commits: Commit[] = await getRepoCommits("xkjjx", "csce315-personal-portfolio", process.env.GITHUB_TOKEN);
+  const [commits, setCommits] = useState<Commit[]>([]);
+  const [repoAnalysis, setRepoAnalysis] = useState<RepoAnalysis | null>(null);
+  const { data: session, status } = useSession();
 
-  // Function to format date in a readable way
 
-
-  const { content: commitsAnalysis, complexity, metrics } = await analyzeRepoData(commits);
-  console.log(commitsAnalysis)
+  useEffect(() => {
+    if (session) {
+      getRepoCommits("xkjjx", "csce315-personal-portfolio", session.accessToken).then(setCommits);
+    }
+    analyzeRepoData(commits).then(setRepoAnalysis);
+  }, [session]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -131,68 +131,13 @@ export default async function Home() {
           <p className="mt-1 text-sm text-gray-500">
             Viewing commits for <span className="font-medium">xkjjx/csce315-personal-portfolio</span>
           </p>
+          <GitHubSignIn />
         </div>
       </header>
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-6 bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h2 className="text-lg font-medium text-gray-900">Repository Complexity Analysis</h2>
-              <div className="mt-2">
-                <div className="flex items-center">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className={`h-2.5 rounded-full ${
-                        complexity < 30 ? 'bg-green-600' : 
-                        complexity < 70 ? 'bg-yellow-600' : 
-                        'bg-red-600'
-                      }`}
-                      style={{ width: `${complexity}%` }}
-                    ></div>
-                  </div>
-                  <span className="ml-2 text-sm text-gray-600">{complexity}/100</span>
-                </div>
-                <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Total Commits</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{metrics.totalCommits}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Contributors</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{metrics.uniqueContributors.size}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Files Modified</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{metrics.filesModified.size}</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-            <div className="px-4 py-5 sm:px-6 bg-gray-50">
-              <div className="whitespace-pre-wrap text-gray-900 text-sm">
-                {commitsAnalysis}
-              </div>
-            </div>
-          </div>
-          {commits.length > 0 ? (
-            <div className="space-y-6">
-              {commits.map((commit, index) => (
-                <CommitCard {...commit} key={index}/>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m0 16v1m-8-8h1m15 0h1m-9-9l1 1m-1 13l1-1m-13-5l1 1m16-1l-1 1m-9-9l1 1m-1 13l1-1m-13-5l1 1m16-1l-1 1" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No commits found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                There are no commits in this repository or an error occurred while fetching them.
-              </p>
-            </div>
-          )}
-        </div>
+        {repoAnalysis && <RepoAnalysisComponent repoAnalysis={repoAnalysis} />}
+        <CommitCards commits={commits} />
       </main>
     </div>
   );
