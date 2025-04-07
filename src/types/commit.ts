@@ -1,5 +1,5 @@
 export interface Commit {
-  timestamp: string;
+  timestamp: Date;
   author: string;
   commitMessage: string;
   diff: string;
