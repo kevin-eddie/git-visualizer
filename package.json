@@ -9,7 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.43",
+    "@langchain/openai": "^0.5.4",
     "@octokit/rest": "^21.1.1",
+    "langchain": "^0.3.20",
     "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

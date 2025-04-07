@@ -1,12 +1,7 @@
 import Image from "next/image";
+import { analyzeRepoData } from "../lib/analyzeRepoData";
 import { Octokit } from "@octokit/rest";
-
-interface Commit {
-  timestamp: Date;
-  author: string;
-  commitMessage: string;
-  diff: string;
-}
+import { Commit } from "../types/commit";
 
 export default async function Home() {
   /**
@@ -131,6 +126,9 @@ export default async function Home() {
       minute: '2-digit'
     });
   }
+
+  // const commitsAnalysis = await analyzeRepoData(commits);
+  // console.log(commitsAnalysis)
 
   return (
     <div className="min-h-screen bg-gray-100">
