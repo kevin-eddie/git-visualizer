@@ -1,5 +1,6 @@
 "use client";
 
+import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
 import { RepoAnalysis } from "@/types/RepoAnalysis";
 
@@ -40,8 +41,8 @@ export default function RepoAnalysisComponent({ repoAnalysis }: { repoAnalysis: 
               </div>
             </div>
             <div className="px-4 py-5 sm:px-6 bg-gray-50">
-              <div className="whitespace-pre-wrap text-gray-900 text-sm">
-                {repoAnalysis?.content}
+              <div className="prose prose-sm max-w-none text-gray-900">
+                <ReactMarkdown>{repoAnalysis?.content}</ReactMarkdown>
               </div>
             </div>
           </div>
