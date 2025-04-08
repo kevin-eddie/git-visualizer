@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { RepoAnalysis } from "../types/repoAnalysis";
 import RepoAnalysisComponent from "@/components/RepoAnalysisComponent";
 import RepoInformation from "@/types/repoInformation";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Home() {
   async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
@@ -186,13 +187,13 @@ export default function Home() {
 
   const { data: session } = useSession();
 
-  const handleRepoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!e.target.value) {
+  const handleRepoChange = (value: string) => {
+    if (!value) {
       setSelectedRepo(null);
       return;
     }
     
-    const [selectedOwner, selectedRepo] = e.target.value.split('/');
+    const [selectedOwner, selectedRepo] = value.split('/');
     setSelectedRepo({owner: selectedOwner, repo: selectedRepo});
   };
 
@@ -220,30 +221,35 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray">
-      <header className="bg-white">
+      <header className="bg-white sm:rounded-lg m-4">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold">Git Visualizer</h1>
           
           <div className="mt-4 mb-2">
-            <label htmlFor="repo-select" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="repo-select" className="block text-sm font-medium text-gray-700 mb-2">
               Select Repository:
             </label>
-            <select
-              id="repo-select"
-              value={selectedRepo ? `${selectedRepo.owner}/${selectedRepo.repo}` : ""}
-              onChange={handleRepoChange}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            <Select 
+              value={selectedRepo ? `${selectedRepo.owner}/${selectedRepo.repo}` : ""} 
+              onValueChange={handleRepoChange}
               disabled={isLoadingRepos}
             >
-              <option value="" disabled={repos.length > 0}>
-                {repos.length === 0 ? "Loading repositories..." : "Select a repository"}
-              </option>
-              {repos.map((repo) => (
-                <option key={`${repo.owner}/${repo.repo}`} value={`${repo.owner}/${repo.repo}`}>
-                  {repo.owner}/{repo.repo}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={repos.length === 0 ? "Loading repositories..." : "Select a repository"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {repos.map((repo) => (
+                    <SelectItem 
+                      key={`${repo.owner}/${repo.repo}`} 
+                      value={`${repo.owner}/${repo.repo}`}
+                    >
+                      {repo.owner}/{repo.repo}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           {
             (!session) && (
