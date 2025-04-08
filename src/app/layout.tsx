@@ -31,11 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <div className="flex flex-col min-h-screen">
-            <div className="my-4 px-10">
+          <div className="flex flex-col min-h-screen bg-gray-100">
+            <div className="py-4 px-15 border-b border-gray-200 bg-white">
               <Navbar />
             </div>
-            <main className="flex-1 mx-8">{children}</main>
+            <main className="flex-1 mx-20">{children}</main>
           </div>
         </AuthProvider>
       </body>
