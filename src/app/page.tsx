@@ -6,7 +6,7 @@ import CommitCards from "../components/CommitCards"
 import GitHubSignIn from "@/components/GitHubSignIn";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { RepoAnalysis } from "../types/RepoAnalysis";
+import { RepoAnalysis } from "../types/repoAnalysis";
 import RepoAnalysisComponent from "@/components/RepoAnalysisComponent";
 import RepoInformation from "@/types/repoInformation";
 export default function Home() {

@@ -1,4 +1,4 @@
-import { Commit } from "../types/commit"
+import Commit from "@/types/commit"
 
 
 export default function CommitCard(commit: Commit) {
