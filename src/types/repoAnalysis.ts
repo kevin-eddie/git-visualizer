@@ -1,8 +1,4 @@
-export interface RepoAnalysis {
-    content: string;
-    complexity: number;
-    metrics: ComplexityMetrics;
-}
+export type RepoAnalysis = string;
 
 export interface ComplexityMetrics {
     totalCommits: number;
