@@ -3,12 +3,12 @@ import { analyzeRepoData } from "../lib/analyzeRepoData";
 import { Octokit } from "@octokit/rest";
 import Commit from "../types/commit";
 import CommitCards from "../components/CommitCards"
-import GitHubSignIn from "@/components/GitHubSignIn";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { RepoAnalysis } from "../types/repoAnalysis";
 import RepoAnalysisComponent from "@/components/RepoAnalysisComponent";
 import RepoInformation from "@/types/repoInformation";
+
 export default function Home() {
   async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
     try {
@@ -245,7 +245,13 @@ export default function Home() {
               ))}
             </select>
           </div>
-          <GitHubSignIn />
+          {
+            (!session) && (
+              <div className="mt-4 mb-2">
+                Please sign in to analyze your repository.
+              </div>
+            )
+          }
         </div>
       </header>
       
