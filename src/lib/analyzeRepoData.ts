@@ -5,7 +5,7 @@ import { ChatOllama } from "@langchain/ollama";
 
 const deployment = "local";
 
-let chunkSummaryPrompt = `
+const chunkSummaryPrompt = `
   Analyze the high-level evolution of this repository segment based on commit evidence.
 
   Format output using Markdown:
@@ -46,7 +46,7 @@ let chunkSummaryPrompt = `
   Provide a fact-based analysis of how this project segment evolved at a strategic level, supported by specific commit evidence.
 `;
 
-let chunkChunksPrompt = `
+const chunkChunksPrompt = `
 Synthesize multiple development periods to analyze project-level evolution.
 
 Format Requirements:
@@ -87,7 +87,7 @@ Connect observations to show how project priorities and focus evolved over time.
 Present a fact-based analysis of how project goals and priorities evolved across these periods, supported by commit evidence.
 `;
 
-let finalSummaryPrompt = `
+const finalSummaryPrompt = `
 Provide a comprehensive analysis of this repository's strategic evolution based on commit history.
 
 Format Requirements:

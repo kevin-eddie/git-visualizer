@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Commit from "@/types/commit";
 import CommitCard from "./CommitCard";
 
