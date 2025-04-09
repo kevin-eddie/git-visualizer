@@ -11,68 +11,6 @@ import RepoInformation from "@/types/repoInformation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Home() {
-  async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
-    try {
-      const octokit = new Octokit({
-        auth: token
-      });
-
-      let page = 1;
-      let hasMoreCommits = true;
-      const commits: Commit[] = [];
-
-      while (hasMoreCommits) {
-        try {
-          const response = await octokit.repos.listCommits({
-            owner,
-            repo,
-            per_page: 100,
-            page: page++
-          });
-
-          if (response.data.length === 0) {
-            hasMoreCommits = false;
-            continue;
-          }
-
-          for (const commit of response.data) {
-            const authorName = commit.author?.login || commit.commit.author?.name || 'Unknown';
-            const date = new Date(commit.commit.author?.date || '');
-            const message = commit.commit.message;
-
-            const diff = await getCommitDiff(octokit, owner, repo, commit.sha).catch((e) => {
-              return "";
-            })
-
-            commits.push({
-              timestamp: date,
-              author: authorName,
-              commitMessage: message,
-              diff
-            });
-          }
-
-        } catch (error) {
-          console.error('Error fetching commits:', error);
-          hasMoreCommits = false;
-        }
-      }
-
-      return commits;
-
-    } catch (error: any) {
-      console.error('Error accessing repository:', error);
-      
-      // Provide helpful error message for rate limiting
-      if (error.status === 403 && error.headers?.['x-ratelimit-remaining'] === '0') {
-        console.error('GitHub API rate limit exceeded. Please use a personal access token.');
-      }
-      
-      // Return empty array if there's an error
-      return [];
-    }
-  }
-
   async function getCommitDiff(
     octokit: Octokit,
     owner: string,
@@ -206,6 +144,82 @@ export default function Home() {
   }, [session]);
 
   useEffect(() => {
+    async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
+      try {
+        const octokit = new Octokit({
+          auth: token
+        });
+  
+        let page = 1;
+        let hasMoreCommits = true;
+        const commits: Commit[] = [];
+  
+        while (hasMoreCommits) {
+          try {
+            const response = await octokit.repos.listCommits({
+              owner,
+              repo,
+              per_page: 100,
+              page: page++
+            });
+  
+            if (response.data.length === 0) {
+              hasMoreCommits = false;
+              continue;
+            }
+  
+            for (const commit of response.data) {
+              const authorName = commit.author?.login || commit.commit.author?.name || 'Unknown';
+              const date = new Date(commit.commit.author?.date || '');
+              const message = commit.commit.message;
+  
+              const diff = await getCommitDiff(octokit, owner, repo, commit.sha).catch((e) => {
+                console.error('Error fetching commit diff:', e);
+                return "";
+              })
+  
+              commits.push({
+                timestamp: date,
+                author: authorName,
+                commitMessage: message,
+                diff
+              });
+            }
+  
+          } catch (error) {
+            console.error('Error fetching commits:', error);
+            hasMoreCommits = false;
+          }
+        }
+  
+        return commits;
+  
+      } catch (error) {
+        console.error('Error accessing repository:', error);
+        
+        // Type guard to check if error is a GitHub API error
+        interface GitHubApiError {
+          status: number;
+          headers?: {
+            'x-ratelimit-remaining': string;
+          };
+        }
+
+        const isGitHubApiError = (err: unknown): err is GitHubApiError => {
+          return typeof err === 'object' && err !== null && 'status' in err;
+        };
+
+        // Provide helpful error message for rate limiting
+        if (isGitHubApiError(error) && 
+            error.status === 403 && 
+            error.headers?.['x-ratelimit-remaining'] === '0') {
+          console.error('GitHub API rate limit exceeded. Please use a personal access token.');
+        }
+        
+        // Return empty array if there's an error
+        return [];
+      }
+    }
     if (session && selectedRepo) {
       setCommits([]);
       setRepoAnalysis(null);
