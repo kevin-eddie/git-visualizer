@@ -3,4 +3,5 @@ export default interface Commit {
   author: string;
   commitMessage: string;
   diff: string;
+  githubUrl: string;
 }

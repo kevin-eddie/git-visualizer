@@ -9,6 +9,7 @@ import { RepoAnalysis } from "../types/repoAnalysis";
 import RepoAnalysisComponent from "@/components/RepoAnalysisComponent";
 import RepoInformation from "@/types/repoInformation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   async function getCommitDiff(
@@ -122,16 +123,21 @@ export default function Home() {
   const [selectedRepo, setSelectedRepo] = useState<RepoInformation | null>(null);
   const [repos, setRepos] = useState<Array<RepoInformation>>([]);
   const [isLoadingRepos, setIsLoadingRepos] = useState<boolean>(false);
+  const [pendingRepo, setPendingRepo] = useState<string>("");
 
   const { data: session } = useSession();
 
   const handleRepoChange = (value: string) => {
-    if (!value) {
+    setPendingRepo(value);
+  };
+
+  const handleConfirmRepo = () => {
+    if (!pendingRepo) {
       setSelectedRepo(null);
       return;
     }
     
-    const [selectedOwner, selectedRepo] = value.split('/');
+    const [selectedOwner, selectedRepo] = pendingRepo.split('/');
     setSelectedRepo({owner: selectedOwner, repo: selectedRepo});
   };
 
@@ -168,7 +174,7 @@ export default function Home() {
               continue;
             }
   
-            for (const commit of response.data) {
+            for (const commit of response.data.slice(0, response.data.length - 1)) {
               const authorName = commit.author?.login || commit.commit.author?.name || 'Unknown';
               const date = new Date(commit.commit.author?.date || '');
               const message = commit.commit.message;
@@ -182,10 +188,19 @@ export default function Home() {
                 timestamp: date,
                 author: authorName,
                 commitMessage: message,
-                diff
+                diff,
+                githubUrl: `https://github.com/${owner}/${repo}/commit/${commit.sha}`
               });
             }
-  
+
+            const lastCommit = response.data[response.data.length - 1];
+            commits.push({
+              timestamp: new Date(lastCommit.commit.author?.date || ''),
+              author: lastCommit.author?.login || lastCommit.commit.author?.name || 'Unknown',
+              commitMessage: lastCommit.commit.message,
+              diff: "",
+              githubUrl: `https://github.com/${owner}/${repo}/commit/${lastCommit.sha}`
+            });
           } catch (error) {
             console.error('Error fetching commits:', error);
             hasMoreCommits = false;
@@ -243,27 +258,35 @@ export default function Home() {
             <label htmlFor="repo-select" className="block text-sm font-medium text-gray-700 mb-2">
               Select Repository:
             </label>
-            <Select 
-              value={selectedRepo ? `${selectedRepo.owner}/${selectedRepo.repo}` : ""} 
-              onValueChange={handleRepoChange}
-              disabled={isLoadingRepos}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={repos.length === 0 ? "Loading repositories..." : "Select a repository"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {repos.map((repo) => (
-                    <SelectItem 
-                      key={`${repo.owner}/${repo.repo}`} 
-                      value={`${repo.owner}/${repo.repo}`}
-                    >
-                      {repo.owner}/{repo.repo}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select 
+                value={pendingRepo} 
+                onValueChange={handleRepoChange}
+                disabled={isLoadingRepos}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={repos.length === 0 ? "Loading repositories..." : "Select a repository"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {repos.map((repo) => (
+                      <SelectItem 
+                        key={`${repo.owner}/${repo.repo}`} 
+                        value={`${repo.owner}/${repo.repo}`}
+                      >
+                        {repo.owner}/{repo.repo}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleConfirmRepo}
+                disabled={isLoadingRepos}
+              >
+                Load Repository
+              </Button>
+            </div>
           </div>
           {
             (!session) && (
@@ -275,12 +298,15 @@ export default function Home() {
         </div>
       </header>
       
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 p-4">
         {selectedRepo ? (
-            <>
+            <div className="flex flex-col gap-4 bg-white p-4 rounded-lg">
+              <div className="text-2xl font-bold mx-4 my-2">
+                Commits for {selectedRepo.owner}/{selectedRepo.repo}
+              </div>
+              <CommitCards commits={commits}/>
               {repoAnalysis && <RepoAnalysisComponent repoAnalysis={repoAnalysis} />}
-              <CommitCards commits={commits} />
-            </>
+            </div>
         ) : (
           <div className="text-center py-12 px-4">
             <h3 className="mt-2 text-sm font-medium text-gray-900">No repository selected</h3>
