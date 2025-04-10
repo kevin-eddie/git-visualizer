@@ -3,7 +3,7 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import Commit from "../types/commit";
 import { ChatOllama } from "@langchain/ollama";
 
-const deployment = "local";
+const environment = process.env.ENVIRONMENT || "development";
 
 const chunkSummaryPrompt = `
   Analyze the high-level evolution of this repository segment based on commit evidence.
@@ -142,7 +142,7 @@ Present a fact-based analysis of this project's high-level evolution, supported 
 `;
 
 export async function analyzeRepoData(commits: Commit[]): Promise<string> {
-  const model = deployment === "local" ? 
+  const model = environment === "development" ? 
     new ChatOllama({
       baseUrl: "http://localhost:11434",
       model: "gemma3:1b",
