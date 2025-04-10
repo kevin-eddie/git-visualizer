@@ -1,5 +1,4 @@
 "use client";
-import { analyzeRepoData } from "../lib/analyzeRepoData";
 import { Octokit } from "@octokit/rest";
 import Commit from "../types/commit";
 import CommitCards from "../components/CommitCards"
@@ -11,47 +10,7 @@ import RepoInformation from "@/types/repoInformation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
-export default function Home() {
-  async function getCommitDiff(
-    octokit: Octokit,
-    owner: string,
-    repo: string,
-    commitSha: string
-  ): Promise<string> {
-    // Get commit to find parent SHA
-    const { data: commit } = await octokit.repos.getCommit({
-      owner,
-      repo,
-      ref: commitSha,
-    });
-  
-    if (!commit.parents || commit.parents.length === 0) {
-      throw new Error("This appears to be the first commit in the repository with no parent commits.");
-    }
-  
-    const baseSha = commit.parents[0].sha;
-  
-    // Use SDK to compare commits (structured response)
-    const { data: comparison } = await octokit.repos.compareCommitsWithBasehead({
-      owner,
-      repo,
-      basehead: `${baseSha}...${commitSha}`,
-    });
-  
-    // Build a simple unified diff-like output
-    let diffOutput = `Comparing ${baseSha}...${commitSha}\n\n`;
-  
-    for (const file of comparison.files ?? []) {
-      diffOutput += `diff --git a/${file.filename} b/${file.filename}\n`;
-      diffOutput += `--- a/${file.filename}\n`;
-      diffOutput += `+++ b/${file.filename}\n`;
-      diffOutput += file.patch ?? "(no patch available)\n";
-      diffOutput += `\n`;
-    }
-  
-    return diffOutput;
-  }
-  
+export default function Home() {  
   async function fetchUserRepositories(token: string) {
     setIsLoadingRepos(true);
     try {
@@ -150,103 +109,44 @@ export default function Home() {
   }, [session]);
 
   useEffect(() => {
-    async function getRepoCommits(owner: string, repo: string, token?: string): Promise<Commit[]> {
+    async function fetchAndAnalyzeRepo() {
+      if (!session || !selectedRepo) return;
+
       try {
-        const octokit = new Octokit({
-          auth: token
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            owner: selectedRepo.owner,
+            repo: selectedRepo.repo,
+          }),
         });
-  
-        let page = 1;
-        let hasMoreCommits = true;
-        const commits: Commit[] = [];
-  
-        while (hasMoreCommits) {
-          try {
-            const response = await octokit.repos.listCommits({
-              owner,
-              repo,
-              per_page: 100,
-              page: page++
-            });
-  
-            if (response.data.length === 0) {
-              hasMoreCommits = false;
-              continue;
-            }
-  
-            for (const commit of response.data.slice(0, response.data.length - 1)) {
-              const authorName = commit.author?.login || commit.commit.author?.name || 'Unknown';
-              const date = new Date(commit.commit.author?.date || '');
-              const message = commit.commit.message;
-  
-              const diff = await getCommitDiff(octokit, owner, repo, commit.sha).catch((e) => {
-                console.error('Error fetching commit diff:', e);
-                return "";
-              })
-  
-              commits.push({
-                timestamp: date,
-                author: authorName,
-                commitMessage: message,
-                diff,
-                githubUrl: `https://github.com/${owner}/${repo}/commit/${commit.sha}`
-              });
-            }
 
-            const lastCommit = response.data[response.data.length - 1];
-            commits.push({
-              timestamp: new Date(lastCommit.commit.author?.date || ''),
-              author: lastCommit.author?.login || lastCommit.commit.author?.name || 'Unknown',
-              commitMessage: lastCommit.commit.message,
-              diff: "",
-              githubUrl: `https://github.com/${owner}/${repo}/commit/${lastCommit.sha}`
-            });
-          } catch (error) {
-            console.error('Error fetching commits:', error);
-            hasMoreCommits = false;
-          }
+        if (!response.ok) {
+          throw new Error('Failed to analyze repository');
         }
-  
-        return commits;
-  
+
+        const data = await response.json();
+        // Convert ISO strings back to Date objects
+        const commitsWithDates = data.commits.map((commit: { timestamp: string }) => ({
+          ...commit,
+          timestamp: new Date(commit.timestamp)
+        }));
+        setCommits(commitsWithDates);
+        setRepoAnalysis(data.analysis);
       } catch (error) {
-        console.error('Error accessing repository:', error);
-        
-        // Type guard to check if error is a GitHub API error
-        interface GitHubApiError {
-          status: number;
-          headers?: {
-            'x-ratelimit-remaining': string;
-          };
-        }
-
-        const isGitHubApiError = (err: unknown): err is GitHubApiError => {
-          return typeof err === 'object' && err !== null && 'status' in err;
-        };
-
-        // Provide helpful error message for rate limiting
-        if (isGitHubApiError(error) && 
-            error.status === 403 && 
-            error.headers?.['x-ratelimit-remaining'] === '0') {
-          console.error('GitHub API rate limit exceeded. Please use a personal access token.');
-        }
-        
-        // Return empty array if there's an error
-        return [];
+        console.error('Error:', error);
       }
     }
-    if (session && selectedRepo) {
+
+    if (selectedRepo) {
       setCommits([]);
       setRepoAnalysis(null);
-      getRepoCommits(selectedRepo.owner, selectedRepo.repo, session.accessToken).then(setCommits);
+      fetchAndAnalyzeRepo();
     }
   }, [session, selectedRepo]);
-
-  useEffect(() => {
-    if (commits.length > 0) {
-      analyzeRepoData(commits).then(setRepoAnalysis);
-    }
-  }, [commits]);
 
   return (
     <div className="min-h-screen bg-gray">

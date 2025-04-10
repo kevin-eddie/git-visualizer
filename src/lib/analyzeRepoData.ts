@@ -3,7 +3,8 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import Commit from "../types/commit";
 import { ChatOllama } from "@langchain/ollama";
 
-const environment = process.env.ENVIRONMENT || "development";
+const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || "development";
+
 
 const chunkSummaryPrompt = `
   Analyze the high-level evolution of this repository segment based on commit evidence.
@@ -159,7 +160,6 @@ export async function analyzeRepoData(commits: Commit[]): Promise<string> {
 
     const promptTemplate = PromptTemplate.fromTemplate(prompt);
     const formattedPrompt = await promptTemplate.format({ input: formattedCommits });
-    console.log("Sending prompt to model:", formattedPrompt);
     
     const response = await model.invoke(formattedPrompt);
     return response.content.toString();
@@ -167,7 +167,6 @@ export async function analyzeRepoData(commits: Commit[]): Promise<string> {
 
   if (commits.length < 10) {
     // Direct summary for small repositories (0-200 words)
-    console.log("Final summary prompt:", finalSummaryPrompt + "\nProvide a concise summary in 0-200 words. Do not ask questions or seek elaboration.");
     return await getSummary(commits, finalSummaryPrompt + "\nProvide a concise summary in 0-200 words. Do not ask questions or seek elaboration.");
 
   } else if (commits.length < 50) {
@@ -185,7 +184,6 @@ export async function analyzeRepoData(commits: Commit[]): Promise<string> {
     const response = await model.invoke(await PromptTemplate.fromTemplate(finalSummaryPrompt + "\nProvide a comprehensive summary in 200-400 words. Do not ask questions or seek elaboration.").format({
       input: `First Half: ${summary1}\nSecond Half: ${summary2}`
     }));
-    console.log("Final response mid-sized:", response.content.toString());
     return response.content.toString();
   } else if (commits.length < 100) {
     // Split into four chunks, then combine in tree structure (400-600 words)
@@ -215,7 +213,6 @@ export async function analyzeRepoData(commits: Commit[]): Promise<string> {
     const finalResponse = await model.invoke(await PromptTemplate.fromTemplate(finalSummaryPrompt + "\nProvide a detailed analysis in 400-600 words. Do not ask questions or seek elaboration.").format({
       input: `First Half: ${combinedSummary1.content}\nSecond Half: ${combinedSummary2.content}`
     }));
-    console.log("Final response large:", finalResponse.content.toString());
     return finalResponse.content.toString();
 
   } else {
